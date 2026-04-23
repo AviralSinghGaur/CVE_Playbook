@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cloud SecOps Portal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { colors: { sidebar: '#0f172a', surface: '#1e293b', border: '#334155' } } }
+    }
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:#0f172a}::-webkit-scrollbar-thumb{background:#475569;border-radius:3px}
+    @keyframes slideIn{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+    @media print {
+      body { background: #fff !important; color: #000 !important; display: block !important; }
+      aside, header, #toast-container, button { display: none !important; }
+      #main-body { overflow: visible !important; padding: 0 !important; }
+      .bg-surface, .bg-slate-900, .bg-slate-800, .bg-slate-800\/50 { background: #fff !important; border-color: #d1d5db !important; }
+      .text-white, .text-slate-200, .text-slate-300 { color: #111 !important; }
+      .text-slate-400, .text-slate-500 { color: #6b7280 !important; }
+      .text-red-200, .text-red-300, .text-orange-300, .text-yellow-300, .text-green-400 { color: #111 !important; }
+      .bg-red-950, .bg-orange-950, .bg-yellow-950, .bg-green-950\/50 { background: #fef2f2 !important; }
+      pre, code { background: #f3f4f6 !important; color: #111 !important; border-color: #d1d5db !important; white-space: pre-wrap; word-break: break-all; }
+      .rounded-xl, .rounded-lg { border: 1px solid #d1d5db !important; }
+      .hidden { display: none !important; }
+      .fade-in { animation: none !important; }
+      .mermaid svg { max-width: 100% !important; }
+      * { box-shadow: none !important; }
+      .grid { display: block !important; }
+      .grid > * { margin-bottom: 16px !important; }
+    }
+    @keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(120%);opacity:0}}
+    .toast-enter{animation:slideIn .35s ease forwards}
+    .toast-exit{animation:slideOut .35s ease forwards}
+    .nav-link.active{background-color:#1e40af;color:#fff}
+    .tab-btn.active{background-color:#2563eb;color:#fff}
+    .check-icon{display:none}
+    input.custom-check:checked + label .check-box{background-color:#16a34a;border-color:#16a34a}
+    input.custom-check:checked + label .check-icon{display:block}
+    .cve-card{transition:transform .15s,box-shadow .15s}
+    .cve-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.4)}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    .fade-in{animation:fadeIn .25s ease forwards}
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-200 flex h-screen overflow-hidden font-sans">
+
+<!-- SIDEBAR -->
+<aside class="w-60 flex-shrink-0 bg-sidebar flex flex-col border-r border-border overflow-y-auto">
+  <div class="px-5 py-4 border-b border-border">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center">
+        <i class="fa-solid fa-shield-halved text-white text-lg"></i>
+      </div>
+      <div>
+        <p class="text-sm font-bold text-white leading-tight">Cloud SecOps</p>
+        <p class="text-xs text-slate-400">Portal v2.5</p>
+      </div>
+    </div>
+  </div>
+  <nav class="flex-1 px-3 py-4 space-y-1">
+    <p class="px-3 mb-2 text-xs font-semibold text-slate-500 uppercase tracking-widest">Navigation</p>
+    <a onclick="showLibrary()" class="nav-link active flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 cursor-pointer transition-colors">
+      <i class="fa-solid fa-house w-4 text-center text-blue-400"></i>Dashboard
+    </a>
+    <a onclick="showLibrary()" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 cursor-pointer transition-colors">
+      <i class="fa-solid fa-layer-group w-4 text-center text-purple-400"></i>CVE Library
+    </a>
+    <a onclick="showToast('Triage Matrix coming soon','fa-hammer')" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 cursor-pointer transition-colors">
+      <i class="fa-solid fa-triangle-exclamation w-4 text-center text-yellow-400"></i>Triage Matrix
+    </a>
+    <a onclick="showToast('Audit Logs coming soon','fa-scroll')" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 cursor-pointer transition-colors">
+      <i class="fa-solid fa-scroll w-4 text-center text-slate-400"></i>Audit Logs
+    </a>
+    <a onclick="showToast('Settings coming soon','fa-gear')" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 cursor-pointer transition-colors">
+      <i class="fa-solid fa-gear w-4 text-center text-slate-400"></i>Settings
+    </a>
+  </nav>
+  <div class="px-5 py-4 border-t border-border">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-full bg-blue-700 flex items-center justify-center text-xs font-bold">AS</div>
+      <div>
+        <p class="text-xs font-semibold text-white">Aviral Singh</p>
+        <p class="text-xs text-slate-500">SecOps Engineer</p>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="flex-1 flex flex-col overflow-hidden">
+  <!-- HEADER -->
+  <header class="flex items-center justify-between px-6 py-4 bg-surface border-b border-border flex-shrink-0">
+    <div id="header-breadcrumb">
+      <h1 class="text-lg font-bold text-white">CVE Playbook Library</h1>
+      <p class="text-xs text-slate-400 mt-0.5">Select a playbook to begin remediation</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="relative">
+        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+        <input id="search-input" oninput="filterCards()" placeholder="Search CVEs…"
+          class="bg-slate-800 border border-border text-sm text-slate-200 pl-8 pr-3 py-1.5 rounded-lg focus:outline-none focus:border-blue-500 w-48 placeholder-slate-500" />
+      </div>
+      <button onclick="showToast('Opening print dialog — choose Save as PDF','fa-file-pdf'); setTimeout(()=>window.print(),400)"
+        class="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors">
+        <i class="fa-solid fa-file-pdf"></i>Export PDF
+      </button>
+    </div>
+  </header>
+
+  <!-- BODY -->
+  <main id="main-body" class="flex-1 overflow-y-auto px-6 py-6"></main>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+<script>
+// ─── CVE DATA ────────────────────────────────────────────────
+const CVES = [
+  {
+    id: 'CVE-2025-15467',
+    title: 'Container-Optimized OS — OpenSSL RCE',
+    cvss: 9.8, severity: 'critical',
+    category: 'GKE / COS',
+    sla: 30,
+    due: '2026-05-23',
+    affected: 42682, resolved: 12610,
+    description: 'The openssl package on Container-Optimized OS image 121.18867.294.38 is vulnerable to CVE-2025-15467 (versions ≥ 121.0.0.0 and < 121.18867.294.100). A known exploit exists. Fixed by upgrading COS image to 121.18867.294.100 or higher.',
+    components: [
+      { name: 'libssl3',      version: '3.5.6-r0',                critical: 0, high: '7K' },
+      { name: 'libcrypto3',   version: '3.5.6-r0',                critical: 0, high: '7K' },
+      { name: 'openssl',      version: '3.5.6-r0',                critical: 0, high: '6K' },
+      { name: 'openssl-libs', version: '1:3.5.5-1.amzn2023.0.4', critical: 0, high: '3K' },
+      { name: 'openssl',      version: '1:3.5.5-1.amzn2023.0.4', critical: 0, high: '2K' },
+    ],
+    summary: [
+      'CVE-2025-15467 affects the openssl package installed by default on Container-Optimized OS (COS). Machines running COS image version 121.18867.294.38 — specifically any version in the range ≥ 121.0.0.0 and < 121.18867.294.100 — are vulnerable. The flaw has been confirmed Critical (CVSS 9.8) by the reporting CNA and a known working exploit has been verified in the wild via VulnCheck, making this a high-urgency remediation. Affected components across the fleet include libssl3, libcrypto3, openssl, and openssl-libs.',
+      'Remediation is achieved by upgrading the COS image to version 121.18867.294.100 or higher. In GKE environments this occurs automatically when node pools are upgraded to a patched image — nodes that have already received the upgrade are no longer exposed. The remaining unresolved findings (28,885 High, 1,187 Medium) correspond to nodes still running the vulnerable image version and will clear as node pool upgrades roll out across the fleet.',
+    ],
+    icon: 'fa-docker', iconColor: 'text-blue-400',
+    mermaid: `flowchart TD
+    A([Wiz Alert Triggered]) --> B{Did node\\nauto-update?}
+    B -- Yes --> C[Verify COS patch version\\n≥ 113.18800.x]
+    C --> D([Close Ticket ✓])
+    B -- No --> E[Escalate: Manual Upgrade\\nPage on-call SRE]
+    E --> F{Node can\\nbe drained?}
+    F -- Yes --> G[Cordon & Drain\\ngcloud upgrade]
+    F -- No --> H[Emergency node-pool\\nreplacement]
+    G --> I([Verify & Close ✓])
+    H --> I
+    style A fill:#1e3a5f,stroke:#3b82f6,color:#e2e8f0
+    style D fill:#14532d,stroke:#16a34a,color:#e2e8f0
+    style I fill:#14532d,stroke:#16a34a,color:#e2e8f0
+    style E fill:#7f1d1d,stroke:#ef4444,color:#e2e8f0
+    style B fill:#1e293b,stroke:#475569,color:#e2e8f0
+    style F fill:#1e293b,stroke:#475569,color:#e2e8f0
+    style G fill:#1e293b,stroke:#475569,color:#e2e8f0
+    style H fill:#78350f,stroke:#f59e0b,color:#e2e8f0`,
+    checklist: [
+      { label: 'Verify OS version on affected nodes', detail: 'Run gcloud compute instances describe <NODE> --format=\'get(disks[0].licenses)\'' },
+      { label: 'Confirm 30-day SLA deadline', detail: 'Remediation due 2026-05-23. Update Jira with due date.' },
+      { label: 'Check auto-update status in Wiz', detail: 'Wiz → Vulnerabilities → filter CVE-2025-15467 → patch state column.' },
+      { label: 'Route ticket to Engineering', detail: 'Assign to cloud-infra-oncall, priority = Critical.' },
+      { label: 'Notify stakeholders in #sec-alerts', detail: 'Post CVE ID, affected count, and ETA.' },
+    ],
+    planA: {
+      title: 'Auto-Fix (Preferred)',
+      color: 'green',
+      steps: [
+        { heading: 'Confirm auto-upgrade is enabled', code: `gcloud container node-pools describe <NODE_POOL> \\
+  --cluster=<CLUSTER> --zone=<ZONE> \\
+  --format='get(management.autoUpgrade)'
+# Expected: True` },
+        { heading: 'Verify patched image post-upgrade', code: `kubectl get nodes -o wide | grep cos
+# Patched: cos-113-18800.309.0 or later
+
+gcloud compute ssh <NODE> --command "openssl version"
+# Expected: OpenSSL 3.0.14 or later` },
+      ]
+    },
+    planB: {
+      title: 'Manual Fix',
+      color: 'yellow',
+      steps: [
+        { heading: 'Cordon & drain the node', code: `kubectl cordon <NODE_NAME>
+kubectl drain <NODE_NAME> --ignore-daemonsets \\
+  --delete-emptydir-data --force --grace-period=120` },
+        { heading: 'Trigger node-pool upgrade', code: `gcloud container clusters upgrade <CLUSTER> \\
+  --node-pool=<POOL> --zone=<ZONE> \\
+  --cluster-version=1.29.8-gke.1100000` },
+        { heading: 'Emergency pool replacement (if drain fails)', code: `gcloud container node-pools create patched-pool \\
+  --cluster=<CLUSTER> --zone=<ZONE> \\
+  --image-type=COS_CONTAINERD \\
+  --node-version=1.29.8-gke.1100000
+
+gcloud container node-pools delete <OLD_POOL> \\
+  --cluster=<CLUSTER> --zone=<ZONE>` },
+      ]
+    }
+  },
+
+  {
+    id: 'CVE-2026-40175',
+    title: 'Axios — Critical HTTP Header Injection',
+    cvss: 9.1, severity: 'critical',
+    category: 'Node.js / npm',
+    sla: 30,
+    due: '2026-05-23',
+    affected: 7410, resolved: 4386,
+    description: 'Improper neutralization of HTTP header values in Axios v1.15.0 allows attackers to inject arbitrary headers via CRLF sequences in unsanitized user-controlled input, enabling SSRF, cache poisoning, and session hijacking. Wiz reports 21 Critical and 3,003 Medium findings.',
+    components: [
+      { name: 'axios', version: '1.15.0', critical: 21, high: 0 },
+    ],
+    summary: [
+      'This vulnerability exists in Axios v1.15.0 where user-controlled values passed into HTTP request headers are not sanitized for CRLF sequences (carriage return \\r and line feed \\n). An attacker who can influence any header value — through URL parameters, API payloads, or form fields — can inject additional HTTP headers into outbound requests made by your Node.js services. Your Wiz scan shows 21 Critical and 3,003 Medium findings, all tied to axios v1.15.0 instances across the environment.',
+      'The practical impact of a successful injection ranges from Server-Side Request Forgery (SSRF) — where internal services are probed via manipulated Host or X-Forwarded-For headers — to HTTP response splitting, cache poisoning of shared CDN/proxy layers, and session hijacking via injected Set-Cookie headers. Any Node.js service making outbound HTTP calls with axios using unsanitized request data is a live attack vector until the library is upgraded or input is sanitized at the call site.',
+    ],
+    icon: 'fa-js', iconColor: 'text-yellow-400',
+    mermaid: `flowchart TD
+    A([SAST / Wiz Alert]) --> B{Axios version\\naffected?}
+    B -- No --> C([Not Affected — Close ✓])
+    B -- Yes --> D{User input passed\\ndirectly to headers?}
+    D -- No --> E[Low risk — upgrade\\nwithin SLA]
+    D -- Yes --> F[Apply header\\nsanitization immediately]
+    F --> G[Upgrade axios to\\npatched version]
+    E --> G
+    G --> H[Run npm audit\\nto confirm fix]
+    H --> I([Verified & Close ✓])
+    style A fill:#1e3a5f,stroke:#3b82f6,color:#e2e8f0
+    style C fill:#14532d,stroke:#16a34a,color:#e2e8f0
+    style I fill:#14532d,stroke:#16a34a,color:#e2e8f0
+    style F fill:#7f1d1d,stroke:#ef4444,color:#e2e8f0
+    style B fill:#1e293b,stroke:#475569,color:#e2e8f0
+    style D fill:#1e293b,stroke:#475569,color:#e2e8f0
+    style E fill:#78350f,stroke:#f59e0b,color:#e2e8f0`,
+    checklist: [
+      { label: 'Identify all services using Axios', detail: 'Run: grep -r "require(\'axios\')" . or check package-lock.json / yarn.lock for axios entries.' },
+      { label: 'Check Axios version in each service', detail: 'Run: npm list axios  —  flag any version listed as affected in the advisory.' },
+      { label: 'Audit code for unsanitized header injection', detail: 'Search for patterns like axios.get(url, { headers: { x: userInput } }) with no sanitization.' },
+      { label: 'Apply input sanitization as immediate workaround', detail: 'Strip CRLF characters (\\r\\n) from any user-controlled value before it reaches an Axios header.' },
+      { label: 'Upgrade Axios to patched version', detail: 'Run: npm install axios@latest  or pin to the fixed version specified in the advisory.' },
+      { label: 'Run npm audit and close ticket', detail: 'Confirm 0 high/critical findings, update Jira, notify #sec-alerts.' },
+    ],
+    planA: {
+      title: 'Upgrade via npm / yarn (Preferred)',
+      color: 'green',
+      steps: [
+        { heading: 'Check current Axios version across repos', code: `# npm
+npm list axios --depth=0
+
+# yarn
+yarn list --pattern axios
+
+# Or scan all package.json files:
+grep -r '"axios"' ./services --include="package.json"` },
+        { heading: 'Upgrade to the patched version', code: `# npm
+npm install axios@latest
+# or pin to exact patched version:
+npm install axios@1.7.9
+
+# yarn
+yarn upgrade axios --latest
+
+# Verify:
+npm list axios   # confirm patched version` },
+        { heading: 'Run full audit to confirm clean', code: `npm audit --audit-level=high
+# Expected: 0 vulnerabilities
+
+# Also run in CI to enforce going forward:
+npm audit --audit-level=critical --json | jq '.vulnerabilities'` },
+      ]
+    },
+    planB: {
+      title: 'Sanitize Headers (Workaround)',
+      color: 'yellow',
+      steps: [
+        { heading: 'Strip CRLF from user-controlled header values', code: `// Utility function — add to shared helpers
+function sanitizeHeader(value) {
+  if (typeof value !== 'string') return value;
+  // Remove CR, LF, and null bytes
+  return value.replace(/[\\r\\n\\0]/g, '');
+}
+
+// Apply before every axios call with user input:
+axios.get(url, {
+  headers: {
+    'X-Custom-Header': sanitizeHeader(userInput),
+  }
+});` },
+        { heading: 'Add ESLint rule to catch future occurrences', code: `// .eslintrc.js — add no-restricted-syntax rule
+// to flag direct user input in axios headers
+"no-restricted-syntax": ["error", {
+  "selector": "Property[key.name='headers']",
+  "message": "Ensure header values are sanitized before use in axios."
+}]` },
+      ]
+    }
+  },
+
+];
+
+// ─── SEVERITY CONFIG ──────────────────────────────────────────
+const SEV = {
+  critical: { label: 'CRITICAL', bg: 'bg-red-900/60', border: 'border-red-600', text: 'text-red-300', dot: 'bg-red-500', alertBg: 'bg-red-950', alertBorder: 'border-red-600', alertText: 'text-red-200', alertSub: 'text-red-300/90', alertStat: 'bg-red-900/40', alertStatText: 'text-red-400' },
+  high:     { label: 'HIGH',     bg: 'bg-orange-900/60', border: 'border-orange-500', text: 'text-orange-300', dot: 'bg-orange-500', alertBg: 'bg-orange-950', alertBorder: 'border-orange-600', alertText: 'text-orange-200', alertSub: 'text-orange-300/90', alertStat: 'bg-orange-900/40', alertStatText: 'text-orange-400' },
+  medium:   { label: 'MEDIUM',   bg: 'bg-yellow-900/60', border: 'border-yellow-500', text: 'text-yellow-300', dot: 'bg-yellow-500', alertBg: 'bg-yellow-950', alertBorder: 'border-yellow-600', alertText: 'text-yellow-200', alertSub: 'text-yellow-300/90', alertStat: 'bg-yellow-900/40', alertStatText: 'text-yellow-400' },
+};
+
+// ─── TOAST ───────────────────────────────────────────────────
+let _tc = 0;
+function showToast(msg, icon='fa-circle-check', dur=3500) {
+  const c = document.getElementById('toast-container');
+  const id = 'toast-' + (++_tc);
+  const d = document.createElement('div');
+  d.id = id;
+  d.className = 'toast-enter pointer-events-auto flex items-center gap-3 bg-green-800 border border-green-600 text-white text-sm font-medium px-4 py-3 rounded-xl shadow-xl max-w-xs';
+  d.innerHTML = `<i class="fa-solid ${icon} text-green-300 flex-shrink-0"></i><span class="flex-1">${msg}</span><button onclick="dismissToast('${id}')" class="text-green-300 hover:text-white ml-1"><i class="fa-solid fa-xmark text-xs"></i></button>`;
+  c.appendChild(d);
+  d._t = setTimeout(() => dismissToast(id), dur);
+}
+function dismissToast(id) {
+  const d = document.getElementById(id);
+  if (!d) return;
+  clearTimeout(d._t);
+  d.classList.replace('toast-enter','toast-exit');
+  d.addEventListener('animationend', () => d.remove(), { once: true });
+}
+
+// ─── LIBRARY VIEW ────────────────────────────────────────────
+function showLibrary() {
+  setActiveNav(0);
+  document.getElementById('header-breadcrumb').innerHTML = `
+    <h1 class="text-lg font-bold text-white">CVE Playbook Library</h1>
+    <p class="text-xs text-slate-400 mt-0.5">Select a playbook to begin remediation</p>`;
+  document.getElementById('search-input').value = '';
+  renderLibrary(CVES);
+  showToast('CVE Library loaded', 'fa-layer-group');
+}
+
+function filterCards() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  const filtered = CVES.filter(c =>
+    c.id.toLowerCase().includes(q) ||
+    c.title.toLowerCase().includes(q) ||
+    c.category.toLowerCase().includes(q) ||
+    c.severity.includes(q)
+  );
+  renderLibrary(filtered);
+}
+
+function renderLibrary(list) {
+  const body = document.getElementById('main-body');
+  const stats = {
+    critical: CVES.filter(c => c.severity === 'critical').length,
+    high: CVES.filter(c => c.severity === 'high').length,
+    total: CVES.reduce((a,c) => a + c.affected, 0),
+    resolved: CVES.reduce((a,c) => a + c.resolved, 0),
+  };
+
+  const cards = list.map(c => {
+    const s = SEV[c.severity];
+    const pct = Math.round((c.resolved / c.affected) * 100);
+    return `
+    <div class="cve-card bg-surface border border-border rounded-xl p-5 cursor-pointer flex flex-col gap-3"
+         onclick="showPlaybook('${c.id}')">
+      <div class="flex items-start justify-between gap-2">
+        <div class="w-10 h-10 rounded-lg bg-slate-800 border border-border flex items-center justify-center flex-shrink-0">
+          <i class="fa-brands ${c.icon} ${c.iconColor} text-lg" onerror="this.className='fa-solid fa-bug ${c.iconColor} text-lg'"></i>
+        </div>
+        <span class="px-2 py-0.5 rounded-full ${s.bg} border ${s.border} ${s.text} text-xs font-bold uppercase flex-shrink-0">${s.label}</span>
+      </div>
+      <div>
+        <p class="text-xs font-mono text-slate-500 mb-0.5">${c.id}</p>
+        <p class="text-sm font-semibold text-white leading-snug">${c.title}</p>
+      </div>
+      <p class="text-xs text-slate-400 line-clamp-2 leading-relaxed">${c.description}</p>
+      <div class="flex items-center justify-between text-xs text-slate-500">
+        <span class="flex items-center gap-1.5"><i class="fa-solid fa-tag"></i>${c.category}</span>
+        <span class="flex items-center gap-1.5"><i class="fa-solid fa-gauge-high"></i>CVSS ${c.cvss}</span>
+        <span class="flex items-center gap-1.5"><i class="fa-solid fa-clock"></i>${c.sla}d SLA</span>
+      </div>
+      <div>
+        <div class="flex justify-between text-xs text-slate-500 mb-1">
+          <span>Remediation</span><span>${c.resolved}/${c.affected} nodes</span>
+        </div>
+        <div class="w-full h-1.5 bg-slate-700 rounded-full overflow-hidden">
+          <div class="h-full ${pct === 100 ? 'bg-green-500' : pct > 60 ? 'bg-blue-500' : 'bg-red-500'} rounded-full" style="width:${pct}%"></div>
+        </div>
+      </div>
+      <div class="pt-1 border-t border-border flex items-center justify-between">
+        <span class="text-xs text-slate-500">Due ${c.due}</span>
+        <span class="text-xs text-blue-400 font-semibold flex items-center gap-1">Open Playbook <i class="fa-solid fa-arrow-right"></i></span>
+      </div>
+    </div>`;
+  }).join('');
+
+  body.innerHTML = `<div class="fade-in space-y-6">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-surface border border-border rounded-xl p-4">
+        <p class="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-1">Total CVEs</p>
+        <p class="text-2xl font-bold text-white">${CVES.length}</p>
+        <p class="text-xs text-slate-500 mt-1">Active playbooks</p>
+      </div>
+      <div class="bg-surface border border-border rounded-xl p-4">
+        <p class="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-1">Critical</p>
+        <p class="text-2xl font-bold text-red-400">${stats.critical}</p>
+        <p class="text-xs text-red-500 mt-1"><i class="fa-solid fa-arrow-up"></i> Immediate action</p>
+      </div>
+      <div class="bg-surface border border-border rounded-xl p-4">
+        <p class="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-1">Affected Nodes</p>
+        <p class="text-2xl font-bold text-white">${stats.total}</p>
+        <p class="text-xs text-slate-500 mt-1">Across all CVEs</p>
+      </div>
+      <div class="bg-surface border border-border rounded-xl p-4">
+        <p class="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-1">Resolved</p>
+        <p class="text-2xl font-bold text-green-400">${stats.resolved}</p>
+        <p class="text-xs text-green-600 mt-1">${Math.round(stats.resolved/stats.total*100)}% of fleet</p>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">${cards || '<p class="text-slate-500 col-span-3 text-center py-12">No CVEs match your search.</p>'}</div>
+  </div>`;
+}
+
+// ─── PLAYBOOK VIEW ───────────────────────────────────────────
+function showPlaybook(id) {
+  const c = CVES.find(x => x.id === id);
+  if (!c) return;
+  const s = SEV[c.severity];
+  const pct = Math.round((c.resolved / c.affected) * 100);
+  const pending = c.affected - c.resolved;
+
+  document.getElementById('header-breadcrumb').innerHTML = `
+    <div class="flex items-center gap-2">
+      <button onclick="showLibrary()" class="text-slate-400 hover:text-white transition-colors text-sm flex items-center gap-1.5">
+        <i class="fa-solid fa-arrow-left"></i> Library
+      </button>
+      <i class="fa-solid fa-chevron-right text-slate-600 text-xs"></i>
+      <span class="text-sm text-slate-300 font-mono">${c.id}</span>
+    </div>
+    <h1 class="text-base font-bold text-white mt-0.5 truncate max-w-lg">${c.title}</h1>`;
+
+  const planASteps = c.planA.steps.map(st => `
+    <div>
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">${st.heading}</p>
+      <pre class="bg-slate-950 border border-border rounded-lg p-4 text-xs text-green-300 overflow-x-auto"><code>${st.code}</code></pre>
+    </div>`).join('');
+
+  const planBSteps = c.planB.steps.map(st => `
+    <div>
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">${st.heading}</p>
+      <pre class="bg-slate-950 border border-border rounded-lg p-4 text-xs text-yellow-300 overflow-x-auto"><code>${st.code}</code></pre>
+    </div>`).join('');
+
+  document.getElementById('main-body').innerHTML = `
+  <div class="fade-in space-y-6">
+
+    <!-- Alert Banner -->
+    <div id="pb-alert" class="${s.alertBg} border ${s.alertBorder} rounded-xl p-5 shadow-lg relative">
+      <button onclick="document.getElementById('pb-alert').remove();showToast('Alert dismissed','fa-eye-slash')" class="absolute top-4 right-4 ${s.text} hover:text-white transition-colors">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+      <div class="flex items-start gap-4">
+        <div class="flex-shrink-0 w-11 h-11 ${s.alertBg} border ${s.alertBorder} rounded-lg flex items-center justify-center">
+          <i class="fa-solid fa-radiation ${s.text} text-xl"></i>
+        </div>
+        <div class="flex-1 min-w-0 pr-6">
+          <div class="flex flex-wrap items-center gap-2 mb-1">
+            <span class="px-2 py-0.5 ${s.bg} ${s.text} border ${s.border} text-xs font-bold rounded uppercase">${s.label}</span>
+            <span class="px-2 py-0.5 bg-slate-800 text-slate-300 text-xs rounded font-mono">${c.id}</span>
+            <span class="px-2 py-0.5 bg-slate-800 text-slate-400 text-xs rounded">${c.category}</span>
+          </div>
+          <h2 class="text-base font-bold ${s.alertText} mb-1">${c.title}</h2>
+          <p class="text-sm ${s.alertSub} leading-relaxed mb-3">${c.description}</p>
+          <div class="flex gap-3">
+            <div class="${s.alertStat} rounded-lg px-4 py-2"><p class="text-xs ${s.alertStatText} uppercase tracking-wide font-semibold">CVSS</p><p class="text-lg font-bold text-white">${c.cvss}</p></div>
+            <div class="${s.alertStat} rounded-lg px-4 py-2"><p class="text-xs ${s.alertStatText} uppercase tracking-wide font-semibold">Affected</p><p class="text-lg font-bold text-white">${c.affected.toLocaleString()}</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-surface border border-border rounded-xl p-4"><p class="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-1">Affected</p><p class="text-2xl font-bold text-white">${c.affected}</p></div>
+      <div class="bg-surface border border-border rounded-xl p-4"><p class="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-1">Resolved</p><p class="text-2xl font-bold text-green-400">${c.resolved}</p><p class="text-xs text-green-600 mt-1">${pct}% complete</p></div>
+      <div class="bg-surface border border-border rounded-xl p-4"><p class="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-1">Pending</p><p class="text-2xl font-bold text-yellow-400">${pending}</p></div>
+      <div class="bg-surface border border-border rounded-xl p-4"><p class="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-1">SLA Days</p><p class="text-2xl font-bold text-orange-400">${c.sla}</p></div>
+    </div>
+
+    <!-- Summary -->
+    <div class="bg-surface border border-border rounded-xl p-5">
+      <div class="flex items-center gap-2 mb-4">
+        <i class="fa-solid fa-microscope text-blue-400"></i>
+        <h3 class="text-sm font-bold text-white uppercase tracking-wide">Vulnerability Summary</h3>
+      </div>
+      <div class="space-y-3">
+        ${c.summary.map(p => `<p class="text-sm text-slate-300 leading-relaxed">${p}</p>`).join('')}
+      </div>
+    </div>
+
+    <!-- Top Exploitable Components -->
+    ${c.components ? `
+    <div class="bg-surface border border-border rounded-xl p-5">
+      <div class="flex items-center gap-2 mb-4">
+        <i class="fa-solid fa-bomb text-orange-400"></i>
+        <h3 class="text-sm font-bold text-white uppercase tracking-wide">Top Exploitable Components</h3>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-border text-xs text-slate-500 uppercase tracking-wide">
+              <th class="text-left pb-2 pr-4 font-semibold">Component</th>
+              <th class="text-left pb-2 pr-4 font-semibold">Version</th>
+              <th class="text-center pb-2 pr-4 font-semibold">Critical</th>
+              <th class="text-center pb-2 font-semibold">High</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-border">
+            ${c.components.map(comp => `
+            <tr class="hover:bg-slate-800/40 transition-colors">
+              <td class="py-2.5 pr-4 font-mono text-slate-200 font-medium">${comp.name}</td>
+              <td class="py-2.5 pr-4 font-mono text-slate-400 text-xs">${comp.version}</td>
+              <td class="py-2.5 pr-4 text-center">
+                ${comp.critical > 0
+                  ? `<span class="px-2 py-0.5 rounded-full bg-red-900/60 border border-red-700 text-red-300 text-xs font-bold">${comp.critical}C</span>`
+                  : `<span class="text-slate-600 text-xs">—</span>`}
+              </td>
+              <td class="py-2.5 text-center">
+                ${comp.high !== 0 && comp.high !== '0'
+                  ? `<span class="px-2 py-0.5 rounded-full bg-orange-900/60 border border-orange-700 text-orange-300 text-xs font-bold">${comp.high}H</span>`
+                  : `<span class="text-slate-600 text-xs">—</span>`}
+              </td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>` : ''}
+
+    <!-- Triage Flowchart -->
+    <div class="bg-surface border border-border rounded-xl p-5">
+      <div class="flex items-center gap-2 mb-4">
+        <i class="fa-solid fa-diagram-project text-blue-400"></i>
+        <h3 class="text-sm font-bold text-white uppercase tracking-wide">Triage Workflow</h3>
+      </div>
+      <div class="mermaid flex justify-center" id="mermaid-${id.replace(/-/g,'')}">${c.mermaid}</div>
+    </div>
+
+    <!-- Engineering Tabs -->
+    <div class="bg-surface border border-border rounded-xl p-5">
+      <div class="flex items-center gap-2 mb-4">
+        <i class="fa-solid fa-terminal text-purple-400"></i>
+        <h3 class="text-sm font-bold text-white uppercase tracking-wide">Engineering Remediation Playbook</h3>
+      </div>
+      <div class="flex gap-2 mb-5">
+        <button id="tb-a-${id}" onclick="switchTab('a','${id}')"
+          class="tab-btn active flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border border-border transition-colors">
+          <i class="fa-solid fa-bolt text-yellow-400"></i>Plan A: ${c.planA.title}
+        </button>
+        <button id="tb-b-${id}" onclick="switchTab('b','${id}')"
+          class="tab-btn flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border border-border bg-slate-800 text-slate-400 transition-colors">
+          <i class="fa-solid fa-wrench text-orange-400"></i>Plan B: ${c.planB.title}
+        </button>
+      </div>
+      <div id="pane-a-${id}">
+        <div class="flex items-start gap-3 p-3 mb-4 bg-green-950/50 border border-green-800 rounded-lg">
+          <i class="fa-solid fa-circle-check text-green-400 mt-0.5"></i>
+          <p class="text-sm text-green-300"><strong>Preferred path.</strong> ${c.planA.title}.</p>
+        </div>
+        <div class="space-y-4">${planASteps}</div>
+      </div>
+      <div id="pane-b-${id}" class="hidden">
+        <div class="flex items-start gap-3 p-3 mb-4 bg-yellow-950/50 border border-yellow-800 rounded-lg">
+          <i class="fa-solid fa-triangle-exclamation text-yellow-400 mt-0.5"></i>
+          <p class="text-sm text-yellow-300"><strong>Use when Plan A is unavailable.</strong> ${c.planB.title}.</p>
+        </div>
+        <div class="space-y-4">${planBSteps}</div>
+      </div>
+    </div>
+
+    <footer class="text-center text-xs text-slate-600 py-2">Cloud SecOps Portal &copy; 2026 — ${c.id} Playbook — Internal Use Only</footer>
+  </div>`;
+
+  // Re-run Mermaid on the new content
+  mermaid.run({ querySelector: `#mermaid-${id.replace(/-/g,'')}` });
+  showToast(`Opened ${c.id} playbook`, 'fa-book-open');
+}
+
+// ─── CHECKLIST ───────────────────────────────────────────────
+function handleCheckbox(el, label, idx, cveId) {
+  const row = document.getElementById(`chk-row-${idx}`);
+  if (el.checked) {
+    row.classList.add('border-green-700','bg-green-950/20');
+    showToast(`✓ ${label}`, 'fa-circle-check');
+  } else {
+    row.classList.remove('border-green-700','bg-green-950/20');
+  }
+  const cve = CVES.find(c => c.id === cveId);
+  const total = cve.checklist.length;
+  const done = document.querySelectorAll(`#checklist-${cveId} .custom-check:checked`).length;
+  document.getElementById(`prog-bar-${cveId}`).style.width = (done/total*100)+'%';
+  document.getElementById(`prog-label-${cveId}`).textContent = `${done} / ${total}`;
+  if (done === total) showToast('All steps complete! Ready to close ticket.', 'fa-flag-checkered');
+}
+
+// ─── TABS ─────────────────────────────────────────────────────
+function switchTab(tab, id) {
+  document.getElementById(`pane-a-${id}`).classList.toggle('hidden', tab !== 'a');
+  document.getElementById(`pane-b-${id}`).classList.toggle('hidden', tab !== 'b');
+  ['a','b'].forEach(t => {
+    const btn = document.getElementById(`tb-${t}-${id}`);
+    btn.classList.toggle('active', t === tab);
+    btn.classList.toggle('bg-slate-800', t !== tab);
+    btn.classList.toggle('text-slate-400', t !== tab);
+  });
+  showToast(`Switched to Plan ${tab.toUpperCase()}`, 'fa-book-open');
+}
+
+// ─── SIDEBAR ACTIVE STATE ────────────────────────────────────
+function setActiveNav(idx) {
+  document.querySelectorAll('.nav-link').forEach((el,i) => el.classList.toggle('active', i === idx));
+}
+
+// ─── INIT ─────────────────────────────────────────────────────
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'dark',
+  themeVariables: { background:'#1e293b', primaryColor:'#1e293b', primaryTextColor:'#e2e8f0', primaryBorderColor:'#475569', lineColor:'#64748b', fontSize:'13px' },
+  flowchart: { curve:'basis', padding:10 }
+});
+renderLibrary(CVES);
+</script>
+</body>
+</html>
